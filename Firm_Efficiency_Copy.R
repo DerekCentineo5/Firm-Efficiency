@@ -14,7 +14,7 @@ library(reshape2)
 library(knitr)
 library(rDEA) 
 
-Fiscal_Year <- 2021
+Fiscal_Year <- 2018
 
 #Load Data
 
@@ -110,4 +110,4 @@ Flitered <- subset(MA_DATA_Shaped, (MA_DATA_Shaped$`perform:FCF` > 0) & !(MA_DAT
     
 #### NOTE: I did not add filter for Firm Efficiency = 1 here for data analysis purposes        
           
-write.csv(Filtered, 'Desktop/2021_Firm_Efficiency.csv')
+write.csv(Filtered, 'Desktop/2018_Firm_Efficiency.csv')
