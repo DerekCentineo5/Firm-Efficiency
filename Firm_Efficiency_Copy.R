@@ -14,7 +14,7 @@ library(reshape2)
 library(knitr)
 library(rDEA) 
 
-Fiscal_Year <- 2018
+Fiscal_Year <- 2021
 
 #Load Data
 
@@ -39,7 +39,7 @@ MA_Info$ModelID <- as.factor(MA_Info$ModelID)
 MA_Data <- MA_Data %>% filter(TagName %in% c('perform:OperatingRevenue', 'perform:CostRevenue', 
                                              'position:SellingGeneralAdministrative5yCapitalization', 'position:PropertyPlantEquipmentGross',
                                              'position:LeaseContractCommitments', 'perform:ResearchDevelopmentExpenses', 
-                                             'position:Goodwill', 'position:OtherIntangibleAssets'))
+                                             'position:Goodwill', 'position:OtherIntangibleAssets', 'perform:FCF', 'value:MarketCap'))
 
 MA_Data$TagReportingValue <- (MA_Data$TagReportingValue/1000000)
 
@@ -53,10 +53,9 @@ MA_DATA_Shaped <- tibble(MA_DATA_Shaped)
 i <- c('perform:OperatingRevenue', 'perform:CostRevenue', 
        'position:SellingGeneralAdministrative5yCapitalization', 'position:PropertyPlantEquipmentGross',
        'position:LeaseContractCommitments', 'perform:ResearchDevelopmentExpenses', 
-       'position:Goodwill', 'position:OtherIntangibleAssets')
+       'position:Goodwill', 'position:OtherIntangibleAssets', 'perform:FCF', 'ModelID')
 
 MA_DATA_Shaped[i] <- sapply(MA_DATA_Shaped[i],as.integer)
-MA_DATA_Shaped$ModelID <- as.character(MA_DATA_Shaped$ModelID)
 
 
 # Merge MA_Info and MA_Data_Shaped
@@ -66,12 +65,12 @@ MA_DATA_Shaped$Company <- MA_Info$`docinfo:EntityCommonName`[match(MA_DATA_Shape
 MA_DATA_Shaped$SICS <- MA_Info$`docinfo:EntitySectorIndustryClassification`[match(MA_DATA_Shaped$ModelID, MA_Info$ModelID)]
 
 MA_DATA_Shaped<-MA_DATA_Shaped[,c("Company","Ticker","SICS","ModelID","perform:OperatingRevenue","perform:CostRevenue","position:SellingGeneralAdministrative5yCapitalization"
-                                  ,"position:PropertyPlantEquipmentGross","position:OtherIntangibleAssets","position:LeaseContractCommitments","position:Goodwill","perform:ResearchDevelopmentExpenses")]
+                                  ,"position:PropertyPlantEquipmentGross","position:OtherIntangibleAssets","position:LeaseContractCommitments","position:Goodwill",
+                                  "perform:ResearchDevelopmentExpenses", "perform:FCF", 'value:MarketCap')]
 
 n <- c("Company","Ticker")
 
 MA_DATA_Shaped[n] <- sapply(MA_DATA_Shaped[n],as.character)
-MA_DATA_Shaped$SICS <- as.factor(MA_DATA_Shaped$SICS)
 
 
 #Identify inputs & outputs
@@ -96,4 +95,19 @@ kable(Result[,])
 
 ## Export Data for Backtest in Bloomberg ##
 
-write.csv(Result, 'Desktop/2018_Firm_Efficiency.csv')
+
+Firm_Efficiency <- (Result[,c(1,2)])
+
+Firm_Efficiency <- data.table(Firm_Efficiency, keep.rownames=TRUE)
+colnames(Firm_Efficiency) <- c('Ticker', 'Firm Efficiency', '-')
+tibble(Firm_Efficiency)
+Firm_Efficiency <- select(Firm_Efficiency, -c('-'))
+
+# Merge and Filter
+
+MA_DATA_Shaped$Firm_Efficiency <- Firm_Efficiency$`Firm Efficiency`[match(MA_DATA_Shaped$Ticker, Firm_Efficiency$Ticker)]
+Flitered <- subset(MA_DATA_Shaped, (MA_DATA_Shaped$`perform:FCF` > 0) & !(MA_DATA_Shaped$SICS <= 10102050) & (MA_DATA_Shaped$`value:MarketCap` > 50000))
+    
+#### NOTE: I did not add filter for Firm Efficiency = 1 here for data analysis purposes        
+          
+write.csv(Filtered, 'Desktop/2021_Firm_Efficiency.csv')
