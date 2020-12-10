@@ -14,12 +14,12 @@ library(reshape2)
 library(knitr)
 library(rDEA) 
 
-Fiscal_Year <- 2018
+Fiscal_Year <- 2021
 
 #Load Data
 
-DEA_Data <- read.csv('Desktop/Falcon Management/Firm_Eff_And_MA/ManagerialAbility_20201002.csv')
-MA_Info <- read.csv('Desktop/Falcon Management/Firm_Eff_And_MA/SMIU_20201002.csv')
+DEA_Data <- read.csv('Documents/Firm_Efficiency/ManagerialAbility_20201002.csv')
+MA_Info <- read.csv('Documents/Firm_Efficiency/SMIU_20201002.csv')
 MA_Data <- data.frame(DEA_Data)
 
 #Format MA_Info
@@ -36,10 +36,17 @@ MA_Info$ModelID <- as.factor(MA_Info$ModelID)
 
 #Format & Select Columns
 
-MA_Data <- MA_Data %>% filter(TagName %in% c('perform:OperatingRevenue', 'perform:CostRevenue', 
-                                             'position:SellingGeneralAdministrative5yCapitalization', 'position:PropertyPlantEquipmentGross',
-                                             'position:LeaseContractCommitments', 'perform:ResearchDevelopmentExpenses', 
-                                             'position:Goodwill', 'position:OtherIntangibleAssets', 'perform:FCF', 'value:MarketCap'))
+MA_Data <- MA_Data %>% filter(TagName %in% c('perform:OperatingRevenue', 
+                                             'perform:CostRevenue',
+                                             'perform:SellingGeneralAdministrative',
+                                             'position:SellingGeneralAdministrative5yCapitalization', 
+                                             'position:PropertyPlantEquipmentGross',
+                                             'position:LeaseContractCommitments', 
+                                             'perform:ResearchDevelopmentExpenses', 
+                                             'position:Goodwill', 
+                                             'position:OtherIntangibleAssets', 
+                                             'perform:FCF', 
+                                             'value:MarketCap'))
 
 MA_Data$TagReportingValue <- (MA_Data$TagReportingValue/1000000)
 
@@ -50,7 +57,7 @@ MA_Data <- subset(MA_Data, FiscalYear==Fiscal_Year)
 MA_DATA_Shaped <- dcast(MA_Data, ModelID + FiscalYear + FiscalPeriod + ActualEstimate ~ TagName, value.var = 'TagReportingValue', fun.aggregate = sum)
 MA_DATA_Shaped <- tibble(MA_DATA_Shaped)
 
-i <- c('perform:OperatingRevenue', 'perform:CostRevenue', 
+i <- c('perform:OperatingRevenue', 'perform:CostRevenue','perform:SellingGeneralAdministrative',
        'position:SellingGeneralAdministrative5yCapitalization', 'position:PropertyPlantEquipmentGross',
        'position:LeaseContractCommitments', 'perform:ResearchDevelopmentExpenses', 
        'position:Goodwill', 'position:OtherIntangibleAssets', 'perform:FCF', 'ModelID')
@@ -64,13 +71,20 @@ MA_DATA_Shaped$Ticker <- MA_Info$`docinfo:PrimarySecurityTradingSymbol`[match(MA
 MA_DATA_Shaped$Company <- MA_Info$`docinfo:EntityCommonName`[match(MA_DATA_Shaped$ModelID, MA_Info$ModelID)]
 MA_DATA_Shaped$SICS <- MA_Info$`docinfo:EntitySectorIndustryClassification`[match(MA_DATA_Shaped$ModelID, MA_Info$ModelID)]
 
-MA_DATA_Shaped<-MA_DATA_Shaped[,c("Company","Ticker","SICS","ModelID","perform:OperatingRevenue","perform:CostRevenue","position:SellingGeneralAdministrative5yCapitalization"
-                                  ,"position:PropertyPlantEquipmentGross","position:OtherIntangibleAssets","position:LeaseContractCommitments","position:Goodwill",
-                                  "perform:ResearchDevelopmentExpenses", "perform:FCF", 'value:MarketCap')]
-
 n <- c("Company","Ticker")
 
 MA_DATA_Shaped[n] <- sapply(MA_DATA_Shaped[n],as.character)
+
+# Fill SG&A w/ Row Values that equal 0
+
+MA_DATA_Shaped$`position:SellingGeneralAdministrative5yCapitalization` <- ifelse(MA_DATA_Shaped$`position:SellingGeneralAdministrative5yCapitalization` <=0, 
+                                                                                 MA_DATA_Shaped$`perform:SellingGeneralAdministrative`, 
+                                                                                 MA_DATA_Shaped$`position:SellingGeneralAdministrative5yCapitalization`)
+
+MA_DATA_Shaped<-MA_DATA_Shaped[,c("Company","Ticker","SICS","ModelID","perform:OperatingRevenue","perform:CostRevenue",
+                                  "position:SellingGeneralAdministrative5yCapitalization",
+                                  "position:PropertyPlantEquipmentGross","position:OtherIntangibleAssets","position:LeaseContractCommitments",
+                                  "position:Goodwill","perform:ResearchDevelopmentExpenses", "perform:FCF", 'value:MarketCap')]
 
 
 #Identify inputs & outputs
@@ -106,8 +120,8 @@ Firm_Efficiency <- select(Firm_Efficiency, -c('-'))
 # Merge and Filter
 
 MA_DATA_Shaped$Firm_Efficiency <- Firm_Efficiency$`Firm Efficiency`[match(MA_DATA_Shaped$Ticker, Firm_Efficiency$Ticker)]
-Flitered <- subset(MA_DATA_Shaped, (MA_DATA_Shaped$`perform:FCF` > 0) & !(MA_DATA_Shaped$SICS <= 10102050) & (MA_DATA_Shaped$`value:MarketCap` > 50000))
-    
+Filtered <- subset(MA_DATA_Shaped, (MA_DATA_Shaped$`perform:FCF` > 0) & !(MA_DATA_Shaped$SICS <= 10102050) & (MA_DATA_Shaped$`value:MarketCap` > 50000))
+
 #### NOTE: I did not add filter for Firm Efficiency = 1 here for data analysis purposes        
-          
-write.csv(Filtered, 'Desktop/2018_Firm_Efficiency.csv')
+
+write.csv(Filtered, 'Desktop/2021_Firm_Efficiency_Baseline.csv')
