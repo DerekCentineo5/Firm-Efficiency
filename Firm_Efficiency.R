@@ -15,6 +15,7 @@ library(knitr)
 library(rDEA) 
 
 Fiscal_Year <- 2021
+Output_Path <- str_glue('Desktop/{Fiscal_Year}_Firm_Efficiency_Baseline.csv')
 
 #Load Data
 
@@ -117,11 +118,11 @@ colnames(Firm_Efficiency) <- c('Ticker', 'Firm Efficiency', '-')
 tibble(Firm_Efficiency)
 Firm_Efficiency <- select(Firm_Efficiency, -c('-'))
 
-# Merge and Filter
+# Merge, Screen, and Export
 
 MA_DATA_Shaped$Firm_Efficiency <- Firm_Efficiency$`Firm Efficiency`[match(MA_DATA_Shaped$Ticker, Firm_Efficiency$Ticker)]
-Filtered <- subset(MA_DATA_Shaped, (MA_DATA_Shaped$`perform:FCF` > 0) & !(MA_DATA_Shaped$SICS <= 10102050) & (MA_DATA_Shaped$`value:MarketCap` > 50000))
 
-#### NOTE: I did not add filter for Firm Efficiency = 1 here for data analysis purposes        
+Screen <- MA_DATA_Shaped %>% 
+  mutate(Satisfied_Constraint = ifelse('perform:FCF' > 0 & SICS > 10102050 & 'value:MarketCap' > 50000, 'Yes', 'No'))
 
-write.csv(Filtered, 'Desktop/2021_Firm_Efficiency_Baseline.csv')
+write.csv(Screen, Output_Path)
